@@ -1,0 +1,109 @@
+################################################################################
+#Script:  Calculate optimal formant ceiling using Escudero et al. (2009) method
+#Author:  Charlie Redmon
+#Updated:  16/10/13
+#NB:  	adjust control variables according to dataset (speaker values should be in separate files)
+#		comment-out column-name print function for subsequent runs with the same output file
+################################################################################
+
+########## CONTROL VARIABLES ##########
+seg_tier = 1
+meta_tier = 1
+directory$ = "C:\Users\gogoi\Desktop\Rerun\Female" 
+data_path$ = "C:\Users\gogoi\Desktop\Rerun\Female" 
+data_file$ = "formantConfig_female_rerun_female.txt"
+sex$ = "female"
+###################################
+
+if sex$ = "female"
+	baseline = 4500
+else
+	baseline = 4000
+endif
+
+Create Strings as file list... list 'directory$'/*.wav
+numberOfFiles = Get number of strings
+
+clearinfo
+
+#headings
+#printline 'FileName'tab$'Sex'tab$'Vowel'tab$'Ceiling'tab$'V1_F2_55'tab$'V1_F2_95'tab$'V2_F2_5'tab$'V2_F2_50'tab$'
+
+printline FilenameSex'tab$'Vowel'tab$'Ceiling'tab$'F1_1_5'tab$'F2_1_5'tab$'F1_2_50'tab$'F2_2_50'tab$'F1_3_mid'tab$'F2_3_mid'tab$'F1_4_55'tab$'F2_4_55'tab$'F1_5_95'tab$'F2_5_95
+#printline 'numberOfFiles'
+for ifile to numberOfFiles
+	select Strings list
+	fileName$ = Get string... ifile
+	Read from file... 'directory$'/'fileName$'
+	fileName$ = selected$("Sound")
+	Read from file... 'directory$'/'fileName$'.TextGrid
+	select Sound 'fileName$'
+	plus TextGrid 'fileName$'
+	Scale times
+	sound = selected("Sound")
+	textgrid = selected("TextGrid")
+
+	for j from 0 to 40
+		
+		step = 'j'*50
+		ceiling = 'baseline' + 'step'
+		
+		select 'sound'
+		formant = To Formant (burg)... 0.01 5 ceiling 0.025 50
+
+		select 'textgrid'
+		seg_tier_n = Get number of intervals... seg_tier
+		
+		for i to 'seg_tier_n'
+			
+			select 'textgrid'
+			seg_label$ = Get label of interval... seg_tier i
+
+			if seg_label$ = "bi" or seg_label$ = "ba" or seg_label$ = "bu" or seg_label$ = "pi" or seg_label$ = "pa" or seg_label$ = "pu" or seg_label$ = "ti" or seg_label$ = "ta" or seg_label$ = "tu" or seg_label$ = "di" or seg_label$ = "da" or seg_label$ = "du" or seg_label$ = "ki" or seg_label$ = "ka" or seg_label$ = "ku" or seg_label$ = "gi" or seg_label$ = "ga" or seg_label$ = "gu"
+				v_start = Get start point... seg_tier i
+				v_end = Get end point... seg_tier i
+				v_dur = 'v_end' - 'v_start'
+				v_mid = 'v_start' + 0.5*'v_dur'
+				t1 = 'v_start' + 0.05*'v_dur'
+				t2 = 'v_start' + 0.50*'v_dur'
+				t3 = 'v_mid'
+				t4 = 'v_start' + 0.55*'v_dur'
+				t5 = 'v_start' + 0.95*'v_dur'
+
+				v_int = Get interval at time... seg_tier v_mid
+				meta_int = Get interval at time... meta_tier v_mid
+
+				v_label$ = Get label of interval... seg_tier v_int
+				meta_label$ = Get label of interval... meta_tier meta_int
+		
+				select 'formant'
+				f1t1 = Get value at time... 1 't1' Hertz Linear
+				f2t1 = Get value at time... 2 't1' Hertz Linear
+				f1t2 = Get value at time... 1 't2' Hertz Linear
+				f2t2 = Get value at time... 2 't2' Hertz Linear
+				f1t3 = Get value at time... 1 't3' Hertz Linear
+				f2t3 = Get value at time... 2 't3' Hertz Linear
+				f1t4 = Get value at time... 1 't4' Hertz Linear
+				f2t4 = Get value at time... 2 't4' Hertz Linear
+				f1t5 = Get value at time... 1 't5' Hertz Linear
+				f2t5 = Get value at time... 2 't5' Hertz Linear
+
+			printline 'fileName$''tab$''sex$''tab$''v_label$''tab$''ceiling''tab$''f1t1:1''tab$''f2t1:1''tab$''f1t2:1''tab$''f2t2:1''tab$'''f1t3:1''tab$''f2t3:1''tab$''f1t4:1''tab$''f2t4:1''tab$''f1t5:1''tab$''f2t5:1'
+
+			endif
+
+		endfor
+		
+		select 'formant'
+		Remove
+
+		fappendinfo 'data_path$'/'data_file$'
+		clearinfo
+
+	endfor
+
+	select 'sound'
+	plus 'textgrid'
+	Remove
+
+endfor
